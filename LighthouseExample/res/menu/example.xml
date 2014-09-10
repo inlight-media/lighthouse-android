@@ -1,0 +1,20 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context="com.inlight.lighthouse.example.ExampleActivity" >
+
+    <item
+        android:id="@+id/action_pause"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="@string/action_pause"/>
+    <item
+        android:id="@+id/action_reload"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="@string/action_reload"/>
+    <item
+        android:id="@+id/action_update_scan"
+        android:orderInCategory="100"
+        android:showAsAction="never"
+        android:title="@string/action_update_scan"/>
+</menu>
