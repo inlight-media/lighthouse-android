@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
 import android.text.method.ScrollingMovementMethod;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -24,6 +23,7 @@ import com.inlight.lighthousesdk.CampaignData;
 import com.inlight.lighthousesdk.LighthouseManager;
 import com.inlight.lighthousesdk.LighthouseNotification;
 import com.inlight.lighthousesdk.LighthouseNotifier;
+import com.inlight.lighthousesdk.LighthouseSettings;
 import com.inlight.lighthousesdk.ibeacon.IBeacon;
 import com.inlight.lighthousesdk.ibeacon.Region;
 
@@ -44,20 +44,20 @@ public class ExampleActivity extends Activity {
     private LighthouseManager lighthouseManager;
     private TextView mTextView;
     private ListView mListView;
-    private List<RangingBeacon> data;
+    private List< RangingBeacon > data;
+    private static final String SENDER_ID = "877637997124";
     private LighthouseNotifier lighthouseNotifier = new LighthouseNotifier() {
         private Set<RangingBeacon> beaconInRange = new HashSet<RangingBeacon>();
-
         @Override
         public void LighthouseDidEnterBeacon(IBeacon beaconData) {
-            beaconInRange.add(new RangingBeacon(beaconData, false));
+            beaconInRange.add(new RangingBeacon(beaconData,false));
             logToDisplay(getCurrentTime() + " Did enter iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
         }
 
         @Override
         public void LighthouseDidExitBeacon(IBeacon beaconData) {
-            beaconInRange.remove(new RangingBeacon(beaconData, false));
-            logToDisplay(getCurrentTime() + " Did exit iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
+            beaconInRange.remove(new RangingBeacon(beaconData,false));
+            logToDisplay(getCurrentTime()+" Did exit iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
         }
 
         @Override
@@ -67,16 +67,16 @@ public class ExampleActivity extends Activity {
             for (RangingBeacon iBeacon : beaconInRange) {
                 updatedBeaconInRange.add(iBeacon);
                 if (beacons != null || beacons.size() == 0) {
-                    for (IBeacon beacon : beacons) {
-                        if (beacon.equals(iBeacon)) {
+                    for (IBeacon beacon : beacons){
+                        if (beacon.equals(iBeacon)){
                             updatedBeaconInRange.remove(iBeacon);
-                            updatedBeaconInRange.add(new RangingBeacon(beacon, true));
+                            updatedBeaconInRange.add(new RangingBeacon(beacon,true));
                         }
                     }
                 }
 
             }
-            data = new ArrayList<RangingBeacon>(updatedBeaconInRange);
+            data = new ArrayList< RangingBeacon >( updatedBeaconInRange );
             Collections.sort(data, new Comparator<RangingBeacon>() {
                 @Override
                 public int compare(final RangingBeacon o1, final RangingBeacon o2) {
@@ -101,23 +101,21 @@ public class ExampleActivity extends Activity {
 
         @Override
         public void LighthouseDidReceiveCampaign(CampaignData campaignData) {
-            logToDisplay(getCurrentTime() + " Did receive Campaign: notification = "
+            logToDisplay(getCurrentTime()+" Did receive Campaign: notification = "
                     + campaignData.getLighthouseNotification().toString() + "campaign = " + campaignData.getCampaign().toString());
         }
 
         @Override
         public void LighthouseDidActionCampaign(LighthouseNotification notification) {
-            logToDisplay(getCurrentTime() + " Did Action Campaign: "
+            logToDisplay(getCurrentTime()+" Did Action Campaign: "
                     + notification.toJSONObject().toString());
         }
 
         @Override
         public void LighthouseDidReceiveNotification(
                 LighthouseNotification notification) {
-            logToDisplay(getCurrentTime() + " Did received a notification: "
+            logToDisplay(getCurrentTime()+" Did received a notification: "
                     + notification.toJSONObject().toString());
-            Log.d("LighthouseManager", " Did received a notification: "
-                    + notification.toString());
             // Post notification of received message.
             NotificationManager mNotificationManager = (NotificationManager)
                     getSystemService(Context.NOTIFICATION_SERVICE);
@@ -140,13 +138,17 @@ public class ExampleActivity extends Activity {
             lighthouseManager.Campaigns(notification);
         }
 
+        @Override
+        public void LighthouseDidUpdateSettings(LighthouseSettings settings) {
+            logToDisplay(getCurrentTime()+" Did Update Settings: "
+                    + settings.isEnabled());
+        }
     };
 
-    private String getCurrentTime() {
+    private String getCurrentTime(){
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
         return sdf.format(new Date());
     }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -157,18 +159,18 @@ public class ExampleActivity extends Activity {
         mListView = (ListView) this.findViewById(R.id.beacon_list);
 
 
-        lighthouseManager = ((ExampleApplication) this.getApplicationContext()).getLighthouseManager();
+        lighthouseManager = ((ExampleApplication)this.getApplicationContext()).getLighthouseManager();
         JSONObject properties = new JSONObject();
         try {
-            properties.put("age", 30);
-            properties.put("gender", "female");
+            properties.put("age",30);
+            properties.put("gender","female");
             lighthouseManager.setProperties(properties);
         } catch (JSONException e) {
             e.printStackTrace();
         }
 
         lighthouseManager.setLightHouseNotifier(lighthouseNotifier);
-        lighthouseManager.requestPushNotifications();
+        lighthouseManager.requestPushNotifications(SENDER_ID);
     }
 
     @Override
@@ -203,7 +205,6 @@ public class ExampleActivity extends Activity {
         super.onDestroy();
         lighthouseManager.terminate();
     }
-
     @Override
     protected void onPause() {
         super.onPause();
@@ -212,7 +213,6 @@ public class ExampleActivity extends Activity {
         }
 
     }
-
     @Override
     protected void onResume() {
         super.onResume();
@@ -225,7 +225,7 @@ public class ExampleActivity extends Activity {
     }
 
     public void onRequestClicked(View view) {
-        lighthouseManager.requestPushNotifications();
+        lighthouseManager.requestPushNotifications(SENDER_ID);
         String regId = lighthouseManager.getRegistrationId();
 
         Intent sendIntent = new Intent();
@@ -235,7 +235,6 @@ public class ExampleActivity extends Activity {
         startActivity(sendIntent);
 
     }
-
     public void onStopClicked(View view) {
         if (lighthouseManager.isBound()) {
             ((Button) view).setText("Start Service");
@@ -313,15 +312,14 @@ public class ExampleActivity extends Activity {
         }
     }
 
-    private class RangingBeacon extends IBeacon {
+    private class RangingBeacon extends IBeacon{
         private Integer integer = Integer.valueOf(9);
-
         private Integer getInteger() {
             return integer;
         }
 
         private RangingBeacon(IBeacon iBeacon, boolean isInside) {
-            super(iBeacon);
+            super (iBeacon);
             this.isInside = isInside;
         }
 

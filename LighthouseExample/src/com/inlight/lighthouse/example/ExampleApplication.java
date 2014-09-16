@@ -13,9 +13,9 @@ public class ExampleApplication extends Application {
     private static final String TAG = "ExampleApplication";
     private LighthouseManager lighthouseManager;
     // setup configure
-    private static String APP_ID = "53d0a03cd4f4b8f4296b022d";
-    private static String APP_KEY = "03cd33f642b2e8aec636a20f8101d52f8dd11e60";
-    private static String APP_TOKEN = "8734fd703dd22c9b4b7c2b40c3ba786cc284fbf3";
+    private static String APP_ID = "5417cbdad6db8a8f4b13846b";
+    private static String APP_KEY = "986471a7ee11583b0266851d8d7b62f883791bf7";
+    private static String APP_TOKEN = "01c68e60a23d53b04128302686f049700341280f";
     @Override
     public void onCreate(){
         super.onCreate();
@@ -48,6 +48,7 @@ public class ExampleApplication extends Application {
                     APP_KEY,
                     APP_TOKEN);
             lighthouseManager.setLighthouseConfig(lighthouseConfig);
+            lighthouseManager.debug = true;
         }
     }
 }
