@@ -135,7 +135,7 @@ public class ExampleActivity extends Activity {
             mBuilder.setTicker(notification.getAlert());
             mBuilder.setAutoCancel(true);
             mNotificationManager.notify(1, mBuilder.build());
-            lighthouseManager.Campaigns(notification);
+            lighthouseManager.campaign(notification);
         }
 
         @Override
