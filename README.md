@@ -243,13 +243,32 @@ You can then listen to these events by implementing the LighthouseNotifier inter
 			//received push notification from GCM
 		}
 
+        @Override
+        public void LighthouseDidUpdateSettings(LighthouseSettings settings) {
+            //update Settings
+        }
+
     };
 
 Event "LighthouseDidReceiveCampaign" is triggered whenever a request to get more detail about a campaign is made. More details in the next "Detailed Campaign Data" section.
 
+In order to receive remote push notification from server while app is closed, you can also register BroadcastReceivers to receive notification and campaign events.
+Intent filter should be defined as below to receive the broadcast.
+Notification Event:
+    <intent-filter>
+        <action android:name="com.inlight.lighthouse.example.action.NOTIFICATION" />
+    </intent-filter>
+
+Campaign Event:
+    <intent-filter>
+        <action android:name="com.inlight.lighthouse.example.action.CAMPAIGN" />
+    </intent-filter>
+
+Please replace com.inlight.lighthouse.example with your own package name.
+
 ### Detailed Campaign Data
 we added the ability to retrieve detailed campaign data that is too large to fit in the 256 byte limit of a push notification. This is useful if you are using the "Meta" field in the Advanced Fields section of campaign creation. In future you will also use this method for getting images, videos, rules etc from the API. To get detailed campaign data you need to give Lighthouse context of the notification to get the corresponding campaign data for.
-    lighthouseManager.Campaigns(notification);
+    lighthouseManager.campaign(notification);
 
 This will make an API call to the Lighthouse server. On completion it will call the "LighthouseDidReceiveCampaign" method.
 
@@ -280,7 +299,7 @@ Often after you've displayed a campaign to a user you'd like to record that they
 
     LighthouseManager lighthouseManager = ((ExampleApplication)this.getApplicationContext()).getLighthouseManager();
     String notificationString = this.getIntent().getStringExtra("campaignNotification");
-    lighthouseManager.CampaignsActioned(LighthouseNotification.parse(notificationString));
+    lighthouseManager.campaignActioned(LighthouseNotification.parse(notificationString));
 
 By calling this method the SDK will subsequently callback "LighthouseDidActionCampaign" method with the LighthouseNotification class as its data.
 
@@ -340,7 +359,47 @@ To put it back into development mode, you can disable production at any time (by
 Google Cloud Messaging for Android (GCM) is a free service that helps developers send data from servers to their Android applications on Android devices.
 It is helpful to have access to the registration ID to test your push notifications. For more details please visit http://developer.android.com/google/gcm/gcm.html
 
+    lighthouseManager.requestPushNotifications(<Your_Sender_ID>);
     lighthouseManager.getRegistrationId();
+
+
+## Settings
+
+The Lighthouse SDK allows you to inspect specific settings for that are retrieved from the server whenever the application is opened (either launched or becomes active). These settngs contain the beacon uuids being monitored and also whether Lighthouse should be enabled or not. Importantly this "isEnabled" boolean allows you to remotely control from the server whether the Lighthouse SDK should be enabled on the device or not.
+
+You can retrieve these settings using two methods, because the request is asynchronous you should use both ways to get the latest updates.
+
+At anytime you can request the settings synchronously using
+
+    lighthouseManager.getSettings();
+
+NOTE: This method can return a null value if the settings have not yet been retrieved for the application. Usually this is on first install of the app because after getting the settings once it saves the settings for future app launches. However you are advised to specifically check this for null value before trying to perform any operations on the result otherwise you will create crashes.
+
+To asynchronously receive notification when the settings are updated you implement below method of LighthouseNotifier in the same way as other events.
+
+    @Override
+        public void LighthouseDidUpdateSettings(LighthouseSettings settings) {
+            logToDisplay(getCurrentTime()+" Did Update Settings: "
+                    + settings.isEnabled());
+        }
+
+
+## Changelog
+
+##### 1.2
+
++ Change default foreground scan period from 1.1 second to 2 seconds.
+
++ Change method name Campaigns() to campaign().
+
++ Change method name CampaignsActioned() to campaignActioned().
+
++ Send broadcast when received push notification and received campaign data.
+##### 1.1
+
++ Added ability to read and subscribe to Lighthouse SDK server settings, in particular whether the SDK should be enabled or not. When the SDK is disabled non of the SDK commands will perform functionality. This means you can include the SDK in a release of your app with it disabled on the server and then in the future you can update the server to enabled and the SDK will begin to perform desired functionality. See Settings information [See Settings information](https://github.com/inlight-media/lighthouse-android#settings).
+
++ Add parameter while request push notifications. Developer can use its own send id to implement GCM push notification. 
 
 ##### 1.0.0
 

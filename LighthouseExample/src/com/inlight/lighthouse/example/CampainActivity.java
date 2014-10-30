@@ -22,7 +22,7 @@ public class CampainActivity extends Activity {
             LighthouseManager lighthouseManager = ((ExampleApplication)this.getApplicationContext()).getLighthouseManager();
             String notificationString = this.getIntent().getStringExtra("campaignNotification");
 
-            lighthouseManager.CampaignsActioned(LighthouseNotification.parse(notificationString));
+            lighthouseManager.campaignActioned(LighthouseNotification.parse(notificationString));
 
             notificationTextView.setText("Campaign action : "+notificationString);
         } else {

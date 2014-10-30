@@ -15,8 +15,7 @@
     <permission android:name="com.inlight.lighthousesdk.permission.C2D_MESSAGE"
         android:protectionLevel="signature" />
     <uses-permission android:name="com.inlight.lighthousesdk.permission.C2D_MESSAGE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    
+
     <uses-sdk
         android:minSdkVersion="18"
         android:targetSdkVersion="18" />
@@ -58,6 +57,18 @@
                 <action android:name="com.google.android.c2dm.intent.RECEIVE" />
                 <action android:name="com.google.android.c2dm.intent.REGISTRATION" />
                 <category android:name="com.inlight.lighthousesdk" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".NotificationReceiver" >
+            <intent-filter>
+                <action android:name="com.inlight.lighthouse.example.action.NOTIFICATION" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".CampaignReceiver" >
+            <intent-filter>
+                <action android:name="com.inlight.lighthouse.example.action.CAMPAIGN" />
             </intent-filter>
         </receiver>
         <service android:name="com.inlight.lighthousesdk.GcmIntentService" />
