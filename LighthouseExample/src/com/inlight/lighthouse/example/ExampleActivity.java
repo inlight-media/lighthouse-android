@@ -3,10 +3,13 @@ package com.inlight.lighthouse.example;
 import android.app.Activity;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Bundle;
 import android.support.v4.app.NotificationCompat;
+import android.support.v4.content.LocalBroadcastManager;
 import android.text.method.ScrollingMovementMethod;
 import android.view.LayoutInflater;
 import android.view.Menu;
@@ -22,128 +25,28 @@ import android.widget.TextView;
 import com.inlight.lighthousesdk.CampaignData;
 import com.inlight.lighthousesdk.LighthouseManager;
 import com.inlight.lighthousesdk.LighthouseNotification;
-import com.inlight.lighthousesdk.LighthouseNotifier;
 import com.inlight.lighthousesdk.LighthouseSettings;
 import com.inlight.lighthousesdk.ibeacon.IBeacon;
 import com.inlight.lighthousesdk.ibeacon.Region;
 
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 public class ExampleActivity extends Activity {
-    private LighthouseManager lighthouseManager;
+    private LocalBroadcastManager mLocalBroadcastManager;
+    private LighthouseReceiver lighthouseReceiver;
     private TextView mTextView;
     private ListView mListView;
-    private List< RangingBeacon > data;
+    private MyAdapter mAdapter;
+    private HashMap<Region, ArrayList<IBeacon>> data = new HashMap<Region, ArrayList<IBeacon>>();
     private static final String SENDER_ID = "877637997124";
-    private LighthouseNotifier lighthouseNotifier = new LighthouseNotifier() {
-        private Set<RangingBeacon> beaconInRange = new HashSet<RangingBeacon>();
-        @Override
-        public void LighthouseDidEnterBeacon(IBeacon beaconData) {
-            beaconInRange.add(new RangingBeacon(beaconData,false));
-            logToDisplay(getCurrentTime() + " Did enter iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
-        }
-
-        @Override
-        public void LighthouseDidExitBeacon(IBeacon beaconData) {
-            beaconInRange.remove(new RangingBeacon(beaconData,false));
-            logToDisplay(getCurrentTime()+" Did exit iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
-        }
-
-        @Override
-        public void LighthouseDidRangeBeacon(final Collection<IBeacon> beacons,
-                                             Region region) {
-            Set<RangingBeacon> updatedBeaconInRange = new HashSet<RangingBeacon>();
-            for (RangingBeacon iBeacon : beaconInRange) {
-                updatedBeaconInRange.add(iBeacon);
-                if (beacons != null || beacons.size() == 0) {
-                    for (IBeacon beacon : beacons){
-                        if (beacon.equals(iBeacon)){
-                            updatedBeaconInRange.remove(iBeacon);
-                            updatedBeaconInRange.add(new RangingBeacon(beacon,true));
-                        }
-                    }
-                }
-
-            }
-            data = new ArrayList< RangingBeacon >( updatedBeaconInRange );
-            Collections.sort(data, new Comparator<RangingBeacon>() {
-                @Override
-                public int compare(final RangingBeacon o1, final RangingBeacon o2) {
-                    return o1.getMinor() - o2.getMinor();
-                }
-            });
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-
-                    String[] values = new String[data.size()];
-                    int i = 0;
-                    for (IBeacon ibeacon : data) {
-                        values[i] = ibeacon.getMinor() + "    " + String.format("%.2f", ibeacon.getAccuracy());
-                        i++;
-                    }
-                    MyAdapter adapter = new MyAdapter(ExampleActivity.this);
-                    mListView.setAdapter(adapter);
-                }
-            });
-        }
-
-        @Override
-        public void LighthouseDidReceiveCampaign(CampaignData campaignData) {
-            logToDisplay(getCurrentTime()+" Did receive Campaign: notification = "
-                    + campaignData.getLighthouseNotification().toString() + "campaign = " + campaignData.getCampaign().toString());
-        }
-
-        @Override
-        public void LighthouseDidActionCampaign(LighthouseNotification notification) {
-            logToDisplay(getCurrentTime()+" Did Action Campaign: "
-                    + notification.toJSONObject().toString());
-        }
-
-        @Override
-        public void LighthouseDidReceiveNotification(
-                LighthouseNotification notification) {
-            logToDisplay(getCurrentTime()+" Did received a notification: "
-                    + notification.toJSONObject().toString());
-            // Post notification of received message.
-            NotificationManager mNotificationManager = (NotificationManager)
-                    getSystemService(Context.NOTIFICATION_SERVICE);
-            Intent lighthouseIntent = new Intent(ExampleActivity.this, CampainActivity.class);
-            lighthouseIntent.putExtra("campaignActioned", true);
-            lighthouseIntent.putExtra("campaignNotification", notification.toJSONObject().toString());
-            PendingIntent contentIntent = PendingIntent.getActivity(getApplicationContext(),
-                    0, lighthouseIntent, PendingIntent.FLAG_UPDATE_CURRENT);
-
-            NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(
-                    getApplicationContext()).setSmallIcon(R.drawable.ic_launcher)
-                    .setContentInfo(notification.getBadge())
-                    .setContentTitle("Lighthouse Manager Notification")
-                    .setContentText(notification.getAlert());
-
-            mBuilder.setContentIntent(contentIntent);
-            mBuilder.setTicker(notification.getAlert());
-            mBuilder.setAutoCancel(true);
-            mNotificationManager.notify(1, mBuilder.build());
-            lighthouseManager.campaign(notification);
-        }
-
-        @Override
-        public void LighthouseDidUpdateSettings(LighthouseSettings settings) {
-            logToDisplay(getCurrentTime()+" Did Update Settings: "
-                    + settings.isEnabled());
-        }
-    };
+    private LighthouseManager lighthouseManager;
 
     private String getCurrentTime(){
         SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS");
@@ -157,20 +60,11 @@ public class ExampleActivity extends Activity {
                 .findViewById(R.id.monitoringText);
         mTextView.setMovementMethod(new ScrollingMovementMethod());
         mListView = (ListView) this.findViewById(R.id.beacon_list);
+        mAdapter = new MyAdapter(ExampleActivity.this);
+        mListView.setAdapter(mAdapter);
 
-
-        lighthouseManager = ((ExampleApplication)this.getApplicationContext()).getLighthouseManager();
-        JSONObject properties = new JSONObject();
-        try {
-            properties.put("age",30);
-            properties.put("gender","female");
-            lighthouseManager.setProperties(properties);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
-
-        lighthouseManager.setLightHouseNotifier(lighthouseNotifier);
-        lighthouseManager.requestPushNotifications(SENDER_ID);
+        lighthouseManager = ((ExampleApplication) this.getApplicationContext()).getLighthouseManager();
+        lighthouseManager.reload();
     }
 
     @Override
@@ -189,10 +83,19 @@ public class ExampleActivity extends Activity {
             case R.id.action_reload:
                 lighthouseManager.reload();
                 return true;
-            case R.id.action_update_scan:
-                lighthouseManager.setBackgroundBetweenScanPeriod(0);
-                lighthouseManager.setBackgroundScanPeriod(1100);
-                lighthouseManager.updateScanPeriods();
+//            case R.id.action_disable_push_notification:
+//                lighthouseManager.disablePushNotifications();
+//                return true;
+            case R.id.action_enable_push_notification:
+                LighthouseManager lighthouseManager = ((ExampleApplication)getApplication()).getLighthouseManager();
+                lighthouseManager.requestPushNotifications(SENDER_ID);
+                String regId = lighthouseManager.getRegistrationId();
+
+                Intent sendIntent = new Intent();
+                sendIntent.setAction(Intent.ACTION_SEND);
+                sendIntent.putExtra(Intent.EXTRA_TEXT, regId);
+                sendIntent.setType("text/plain");
+                startActivity(sendIntent);
                 return true;
             default:
                 break;
@@ -203,45 +106,46 @@ public class ExampleActivity extends Activity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        lighthouseManager.terminate();
     }
     @Override
     protected void onPause() {
         super.onPause();
-        if (lighthouseManager.isBound()) {
-            lighthouseManager.setBackgroundMode(true);
-        }
-
+        mLocalBroadcastManager.unregisterReceiver(lighthouseReceiver);
     }
     @Override
     protected void onResume() {
         super.onResume();
 
-        if (lighthouseManager.isBound()) {
-            lighthouseManager.setBackgroundMode(false);
-        } else {
-            lighthouseManager.launch();
+        mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
+        lighthouseReceiver = new LighthouseReceiver();
+        String intentPrefix = this.getPackageName();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_BEACONS_IN_REGION);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_CAMPAIGN);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_ACTION_CAMPAIGN);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_NOTIFICATION);
+        mLocalBroadcastManager.registerReceiver(lighthouseReceiver, intentFilter);
+
+        if (lighthouseManager == null) {
+            lighthouseManager = ((ExampleApplication) this.getApplicationContext()).getLighthouseManager();
         }
     }
 
-    public void onRequestClicked(View view) {
-        lighthouseManager.requestPushNotifications(SENDER_ID);
-        String regId = lighthouseManager.getRegistrationId();
-
-        Intent sendIntent = new Intent();
-        sendIntent.setAction(Intent.ACTION_SEND);
-        sendIntent.putExtra(Intent.EXTRA_TEXT, regId);
-        sendIntent.setType("text/plain");
-        startActivity(sendIntent);
-
+    public void onClearClicked(View view) {
+        mTextView.setText(null);
     }
     public void onStopClicked(View view) {
         if (lighthouseManager.isBound()) {
             ((Button) view).setText("Start Service");
-            lighthouseManager.terminate();
+//            lighthouseManager.reset();
+            stopService(new Intent(this, LighthouseService.class));
         } else {
             ((Button) view).setText("Stop Service");
-            lighthouseManager.launch();
+//            lighthouseManager.launch();
+            startService(new Intent(this, LighthouseService.class));
         }
     }
 
@@ -261,16 +165,29 @@ public class ExampleActivity extends Activity {
     }
 
     public class MyAdapter extends BaseAdapter {
-
+        private List<IBeacon> beacons =
+                new ArrayList<IBeacon>();
         private LayoutInflater mInflater = null;
 
         private MyAdapter(Context context) {
             this.mInflater = LayoutInflater.from(context);
         }
 
+        public void setup() {
+            beacons.clear();
+            for (ArrayList<IBeacon> value : data.values()) {
+                beacons.addAll(value);
+            }
+            Collections.sort(beacons, new Comparator<IBeacon>() {
+                @Override
+                public int compare(final IBeacon o1, final IBeacon o2) {
+                    return (int)(o1.getMinor() - o2.getMinor());
+                }
+            });
+        }
         @Override
         public int getCount() {
-            return data.size();
+            return beacons.size();
         }
 
         @Override
@@ -298,39 +215,73 @@ public class ExampleActivity extends Activity {
             } else {
                 holder = (ViewHolder) convertView.getTag();
             }
-            if (data.get(position).isInside()) {
-                holder.img.setImageResource(R.drawable.in);
-                holder.title.setText(String.valueOf(data.get(position).getMinor()));
-            } else {
-                holder.img.setImageResource(R.drawable.out);
-                holder.title.setText(String.valueOf(data.get(position).getMinor()));
-            }
+            holder.img.setImageResource(R.drawable.in);
+            holder.title.setText(String.valueOf(beacons.get(position).getMinor()));
 
-            holder.content.setText(String.valueOf(data.get(position).getBluetoothAddress() + "   " + data.get(position).getAccuracy()));
+            holder.content.setText(String.valueOf(beacons.get(position).getBluetoothAddress() + "   " + beacons.get(position).getAccuracy()));
 
             return convertView;
         }
     }
 
-    private class RangingBeacon extends IBeacon{
-        private Integer integer = Integer.valueOf(9);
-        private Integer getInteger() {
-            return integer;
-        }
+    private class LighthouseReceiver extends BroadcastReceiver {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            String intentPrefix = context.getPackageName();
+            if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_BEACONS_IN_REGION)) {
+                HashSet<IBeacon> beacons = (HashSet<IBeacon>)intent.getSerializableExtra(LighthouseManager.EXTRA_BEACONS);
+                Region region = (Region)intent.getParcelableExtra(LighthouseManager.EXTRA_REGION);
+                if (beacons == null || beacons.size() == 0){
+                    return;
+                }
 
-        private RangingBeacon(IBeacon iBeacon, boolean isInside) {
-            super (iBeacon);
-            this.isInside = isInside;
-        }
+                ArrayList<IBeacon> beaconList= new ArrayList<IBeacon>(beacons);
+                data.put(region,beaconList);
+                mAdapter.setup();
+                mAdapter.notifyDataSetChanged();
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON)) {
+                IBeacon beaconData = intent.getParcelableExtra(LighthouseManager.EXTRA_BEACON);
+                logToDisplay(getCurrentTime() + " Did enter iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON)) {
+                IBeacon beaconData = intent.getParcelableExtra(LighthouseManager.EXTRA_BEACON);
+                logToDisplay(getCurrentTime() + " Did exit iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_NOTIFICATION)) {
+                LighthouseNotification notification = intent.getParcelableExtra(LighthouseManager.EXTRA_NOTIFICATION);
+                logToDisplay(getCurrentTime() + " Did received a notification: "
+                        + notification.toJSONObject().toString());
+                // Post notification of received message.
+                NotificationManager mNotificationManager = (NotificationManager)
+                        getSystemService(Context.NOTIFICATION_SERVICE);
+                Intent lighthouseIntent = new Intent(ExampleActivity.this, CampainActivity.class);
+                lighthouseIntent.putExtra("campaignActioned", true);
+                lighthouseIntent.putExtra("campaignNotification", notification.toJSONObject().toString());
+                PendingIntent contentIntent = PendingIntent.getActivity(getApplicationContext(),
+                        0, lighthouseIntent, PendingIntent.FLAG_UPDATE_CURRENT);
 
-        public boolean isInside() {
-            return isInside;
-        }
+                NotificationCompat.Builder mBuilder = new NotificationCompat.Builder(
+                        getApplicationContext()).setSmallIcon(R.drawable.ic_launcher)
+                        .setContentInfo(notification.getBadge())
+                        .setContentTitle("Lighthouse Manager Notification")
+                        .setContentText(notification.getAlert());
 
-        public void setInside(boolean isInside) {
-            this.isInside = isInside;
+                mBuilder.setContentIntent(contentIntent);
+                mBuilder.setTicker(notification.getAlert());
+                mBuilder.setAutoCancel(true);
+                mNotificationManager.notify(1, mBuilder.build());
+                lighthouseManager.campaign(notification);
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_CAMPAIGN)) {
+                CampaignData campaignData = intent.getParcelableExtra(LighthouseManager.EXTRA_CAMPAIGN);
+                logToDisplay(getCurrentTime() + " Did receive Campaign: notification = "
+                    + campaignData.getLighthouseNotification().toString() + "campaign = " + campaignData.getCampaign().toString());
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ACTION_CAMPAIGN)) {
+                LighthouseNotification notification = intent.getParcelableExtra(LighthouseManager.EXTRA_ACTION_CAMPAIGN);
+                logToDisplay(getCurrentTime() + " Did Action Campaign: "
+                    + notification.toJSONObject().toString());
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS)) {
+                LighthouseSettings settings = (LighthouseSettings)intent.getSerializableExtra(LighthouseManager.EXTRA_SETTINGS);
+                logToDisplay(getCurrentTime() + " Lighthouse Settings: "
+                        + settings.isEnabled() + settings.getUuidsSet());
+            }
         }
-
-        private boolean isInside;
     }
 }
