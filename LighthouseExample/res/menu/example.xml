@@ -13,8 +13,13 @@
         android:showAsAction="never"
         android:title="@string/action_reload"/>
     <item
-        android:id="@+id/action_update_scan"
+        android:id="@+id/action_enable_push_notification"
         android:orderInCategory="100"
         android:showAsAction="never"
-        android:title="@string/action_update_scan"/>
+        android:title="@string/action_enable_push_notification"/>
+    <!--<item-->
+        <!--android:id="@+id/action_disable_push_notification"-->
+        <!--android:orderInCategory="100"-->
+        <!--android:showAsAction="never"-->
+        <!--android:title="@string/action_disable_push_notification"/>-->
 </menu>

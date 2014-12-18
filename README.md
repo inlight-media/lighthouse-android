@@ -109,6 +109,8 @@ Register the LighthouseManager with your Application ID and access keys. The rec
         @Override
         public void onCreate(){
             configLighthouse();
+            startService(new Intent(this,LighthouseService.class));
+            BackgroundPowerSaver backgroundPowerSaver = new BackgroundPowerSaver(this);
         }
 
         public LighthouseManager getLighthouseManager() {
@@ -125,7 +127,12 @@ Register the LighthouseManager with your Application ID and access keys. The rec
                     APP_ID,
                     APP_KEY,
                     APP_TOKEN);
-                lighthouseManager.setLighthouseConfig(lighthouseConfig);
+            lighthouseManager.setLighthouseConfig(lighthouseConfig);
+            lighthouseManager.enableLogging();
+            lighthouseManager.disableRanging();
+            lighthouseManager.enableOffline();
+            lighthouseManager.setBackgroundScanPeriod(5000);
+            lighthouseManager.setBackgroundBetweenScanPeriod(0);
             }
         }
     }
@@ -135,62 +142,49 @@ From now on, in your code, you can just reference the shared client by calling l
 
 It is recommended to getInstance in android.app.Application so that lighthouseManager instance can be used each time the app is launched even from notification.
 
-### Application Suspend & Resume
-To best conserve battery and correctly trigger Lighthouse events you'll need to add the following lines to your application delegate.
+### Service
+In order to keep the lighthouse SDK runing even if the app is terminated, it is recommanded to start a service and launch the SDK in the service.
+Please add below code to keep the the service runing background.
 
-    @Override 
-    protected void onDestroy() {
-        super.onDestroy();
-        lighthouseManager.terminate();
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_STICKY;
     }
-    @Override 
-    protected void onPause() {
-    	super.onPause();
-    	if (lighthouseManager.isBound()) lighthouseManager.setBackgroundMode(true);
+
+    @Override
+    public void onTaskRemoved( Intent rootIntent ) {
+        lighthouseManager.onTaskRemoved();
     }
-    @Override 
-    protected void onResume() {
-    	super.onResume();
-    	
-    	if (lighthouseManager.isBound()) {
-    		lighthouseManager.setBackgroundMode(false);
-    	} else {
-    		lighthouseManager.launch();
-    	}
-    }
-Also you can pause and reload detecting like below:
-    
-    //pause detecting beacons
-    lighthouseManager.pause();
-    //restart detecting beacons
-    lighthouseManager.reload();
 
-### Scan Period
-Sets the duration in milliseconds of each Bluetooth LE scan cycle to look for iBeacons. This function is used to setup the period before launch or when switching between background/foreground. To have it effect on an already running scan (when the next cycle starts, call updateScanPeriods.
+### Battery manager
+To best conserve battery you'll need to add the following lines to your own subclass of android.app.Application.
 
-    /**
-	 * Duration in milliseconds of the bluetooth scan cycle
-	 */
-	 lighthouseManager.setForegroundScanPeriod(1100);
-	/**
-	 * Duration in milliseconds spent not scanning between each
-	 * bluetooth scan cycle
-	 */
-	 lighthouseManager.setForegroundScanPeriod(0);
-	/**
-	 * Duration in milliseconds of the bluetooth scan cycle when no
-	 * clients are in the foreground
-	 */
-	 lighthouseManager.setBackgroundScanPeriod(1000);
-	/**
-	 * The default duration in milliseconds spent not scanning between each
-	 * bluetooth scan cycle when no ranging/monitoring clients are in the
-	 * foreground
-	 */
-	 lighthouseManager.setBackgroundBetweenScanPeriod(5 * 60 * 1000);
+        @Override
+        public void onCreate(){
+            configLighthouse();
+            startService(new Intent(this,LighthouseService.class));
+            BackgroundPowerSaver backgroundPowerSaver = new BackgroundPowerSaver(this);
+        }
 
-     //To have it effect on an already running scan
-     lighthouseManager.updateScanPeriods();
+        private void configLighthouse() {
+            if (lighthouseManager == null) {
+                lighthouseManager = LighthouseManager.getInstance(this);
+
+                LighthouseConfig lighthouseConfig = new LighthouseConfig(
+                    this.getApplicationContext(),
+                    APP_ID,
+                    APP_KEY,
+                    APP_TOKEN);
+            lighthouseManager.setLighthouseConfig(lighthouseConfig);
+            lighthouseManager.enableLogging();
+            lighthouseManager.disableRanging();
+            lighthouseManager.enableOffline();
+            lighthouseManager.setBackgroundScanPeriod(5000);
+            lighthouseManager.setBackgroundBetweenScanPeriod(0);
+            }
+        }
+
+BackgroundPowerSaver only works when you have set background scan period which will track whether your activity is activie or not and set background mode automatically.
 
 
 ### Debugging
@@ -207,76 +201,49 @@ To disable logging (by default it is disabled), simply call:
 ### Events
 The Lighthouse Android SDK doesn't keep all the beacon events for itself, after all sharing is caring. Using the SDK you can subscribe to events such as when a user enters, exits or ranges (usually every five seconds when within a beacon). 
 
-You can then listen to these events by implementing the LighthouseNotifier interface:
+You can then listen to these intents by using the following example commands:
 
-    private LighthouseNotifier lighthouseNotifier = new LighthouseNotifier() {
-
-		@Override
-		public void LighthouseDidEnterBeacon(IBeacon beaconData) {
-			//deal with the case that a beacon enters the device's range
-		}
-
-		@Override
-		public void LighthouseDidExitBeacon(IBeacon beaconData) {
-			//deal with the case that a beacon exit the device's range		
-		}
-
-		@Override
-		public void LighthouseDidRangeBeacon(final Collection<IBeacon> beacons, Region region) {
-			//deal with the beacons that is in region	
-			
-		}
-
-		@Override
-		public void LighthouseDidReceiveCampaign(CampaignData campaignData) {
-			//campaign received
-		}
-
-		@Override
-		public void LighthouseDidActionCampaign(LighthouseNotification notification) {
-			//action campaign
-		}
-
-		@Override
-		public void LighthouseDidReceiveNotification(
-				LighthouseNotification notification) {
-			//received push notification from GCM
-		}
-
+        LocalBroadcastManager mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
+        lighthouseReceiver = new LighthouseReceiver();
+        String intentPrefix = this.getPackageName();
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_BEACONS_IN_REGION);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_CAMPAIGN);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_ACTION_CAMPAIGN);
+        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_NOTIFICATION);
+        mLocalBroadcastManager.registerReceiver(lighthouseReceiver, intentFilter);
+ 
+        private class LighthouseReceiver extends BroadcastReceiver {
         @Override
-        public void LighthouseDidUpdateSettings(LighthouseSettings settings) {
-            //update Settings
+        public void onReceive(Context context, Intent intent) {
+            String intentPrefix = context.getPackageName();
+            if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_BEACONS_IN_REGION)) {
+                //deal with the beacons that is in region
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON)) {
+                //deal with the case that a beacon enters the device's range
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON)) {
+                //deal with the case that a beacon exit the device's range
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_NOTIFICATION)) {
+                //received push notification from GCM
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_CAMPAIGN)) {
+                //campaign received
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ACTION_CAMPAIGN)) {
+                //action campaign
+            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS)) {
+                //update Settings
+            }
         }
 
-    };
+Event LighthouseManager.ACTION_CAMPAIGN is triggered whenever a request to get more detail about a campaign is made. More details in the next "Detailed Campaign Data" section.
 
-Event "LighthouseDidReceiveCampaign" is triggered whenever a request to get more detail about a campaign is made. More details in the next "Detailed Campaign Data" section.
-
-In order to receive remote push notification from server while app is closed, you can also register BroadcastReceivers to receive notification and campaign events.
-Intent filter should be defined as below to receive the broadcast.
-Notification Event:
-    <intent-filter>
-        <action android:name="com.inlight.lighthouse.example.action.NOTIFICATION" />
-    </intent-filter>
-
-Campaign Event:
-    <intent-filter>
-        <action android:name="com.inlight.lighthouse.example.action.CAMPAIGN" />
-    </intent-filter>
-
-Please replace com.inlight.lighthouse.example with your own package name.
 
 ### Detailed Campaign Data
 we added the ability to retrieve detailed campaign data that is too large to fit in the 256 byte limit of a push notification. This is useful if you are using the "Meta" field in the Advanced Fields section of campaign creation. In future you will also use this method for getting images, videos, rules etc from the API. To get detailed campaign data you need to give Lighthouse context of the notification to get the corresponding campaign data for.
     lighthouseManager.campaign(notification);
 
-This will make an API call to the Lighthouse server. On completion it will call the "LighthouseDidReceiveCampaign" method.
-
-        @Override
-        public void LighthouseDidReceiveCampaign(HashMap<String, Object> output) {
-            logToDisplay(getCurrentTime()+" Did receive Campaign: "
-                    + output.toString());
-        }
 
 An example of the data returned is below. You'll see it includes the campaign data as well as the original notification so you can determine which notification was used as context in retrieving the campaign.
 
@@ -301,7 +268,7 @@ Often after you've displayed a campaign to a user you'd like to record that they
     String notificationString = this.getIntent().getStringExtra("campaignNotification");
     lighthouseManager.campaignActioned(LighthouseNotification.parse(notificationString));
 
-By calling this method the SDK will subsequently callback "LighthouseDidActionCampaign" method with the LighthouseNotification class as its data.
+By calling this method the SDK will subsequently send the broadcast of action name "LighthouseManager.ACTION_ACTION_CAMPAIGN" with the LighthouseNotification class as its data.
 
 ### Custom Properties
 
@@ -355,13 +322,44 @@ To put it back into development mode, you can disable production at any time (by
 
     lighthouseManager.disableProduction();
 
+### Offline Mode
+
+Since the Lighthouse SDK need network connection to send data to the server, sometimes data will be lost when network is not available. You can enable this offline mode to store the data and send it whenever there's network connections. By default it is disabled.
+
+    lighthouseManager.disableOffline();
+
+Just put this at any point before you use LighthouseManager. The recommended place to do this is in your own subclass of android.app.Application.
+To enable offline mode to the Ligthhouse server, simply call:
+
+    lighthouseManager.enableOffline();
+
+No matter you are going to use offline mode or not, you have to configure like below to avoid potential INSTALL_FAILED_CONFLICTING_PROVIDER error.
+
+Add below tag to your AndroidManifest.xml:
+
+        <provider android:name="com.inlight.lighthousesdk.provider.LighthouseProvider"
+            tools:replace="android:authorities"
+            android:authorities="YOUR_PACKAGE_NAME" />
+
+Copy and paste ContentProviderAuthority.java file to your project with the same package name so that the lighthouse SDK can find it. And change the value of CONTENT_AUTHORITY to your package name.
+
+### Ranging & Monitoring
+
+By default the Lighthouse SDK does both ranging and monitoring ibeacons. Sometimes you will not be interested in ranging or monitoring. You can use the following methods to control whether doing ranging or monitoring.By default they are enabled.
+
+    lighthouseManager.disableRanging();
+    // or
+    lighthouseManager.disableMonitoring();
+
+
+The recommended place to do this is in your own subclass of android.app.Application before launch the lighthouse SDK. Otherwise, this would probably not work.
+
 ### Google Cloud Messaging
 Google Cloud Messaging for Android (GCM) is a free service that helps developers send data from servers to their Android applications on Android devices.
 It is helpful to have access to the registration ID to test your push notifications. For more details please visit http://developer.android.com/google/gcm/gcm.html
 
     lighthouseManager.requestPushNotifications(<Your_Sender_ID>);
     lighthouseManager.getRegistrationId();
-
 
 ## Settings
 
@@ -375,19 +373,25 @@ At anytime you can request the settings synchronously using
 
 NOTE: This method can return a null value if the settings have not yet been retrieved for the application. Usually this is on first install of the app because after getting the settings once it saves the settings for future app launches. However you are advised to specifically check this for null value before trying to perform any operations on the result otherwise you will create crashes.
 
-To asynchronously receive notification when the settings are updated you implement below method of LighthouseNotifier in the same way as other events.
+To asynchronously receive notification when the settings are updated you can add the intent filter in the same way as other events.
 
-    @Override
-        public void LighthouseDidUpdateSettings(LighthouseSettings settings) {
-            logToDisplay(getCurrentTime()+" Did Update Settings: "
-                    + settings.isEnabled());
-        }
+    intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS);
 
 
 ## Changelog
 
-##### 1.2
+##### 1.3
++ Use background service to track beacons.
 
++ Provide offline mode to cache data when network is not available.
+
++ Use broadcast to receive data from lighthouse SDK.
+
++ Add function of disabling ranging or mornitoring.
+
++ Change the inside expiration time in milliseconds to 45 seconds
+
+##### 1.2
 + Change default foreground scan period from 1.1 second to 2 seconds.
 
 + Change method name Campaigns() to campaign().
@@ -395,14 +399,13 @@ To asynchronously receive notification when the settings are updated you impleme
 + Change method name CampaignsActioned() to campaignActioned().
 
 + Send broadcast when received push notification and received campaign data.
-##### 1.1
 
+##### 1.1
 + Added ability to read and subscribe to Lighthouse SDK server settings, in particular whether the SDK should be enabled or not. When the SDK is disabled non of the SDK commands will perform functionality. This means you can include the SDK in a release of your app with it disabled on the server and then in the future you can update the server to enabled and the SDK will begin to perform desired functionality. See Settings information [See Settings information](https://github.com/inlight-media/lighthouse-android#settings).
 
 + Add parameter while request push notifications. Developer can use its own send id to implement GCM push notification. 
 
 ##### 1.0.0
-
 + Initial SDK Release
 
 ### Questions & Support

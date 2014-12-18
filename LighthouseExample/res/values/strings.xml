@@ -2,7 +2,6 @@
 <resources>
 
     <string name="app_name">LighthouseExample</string>
-    <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
     <string name="title_item_list">Items</string>
     <string name="title_item_detail">Item Detail</string>
@@ -10,5 +9,7 @@
     <string name="action_pause">Pause</string>
     <string name="action_reload">Reload</string>
     <string name="action_update_scan">Update Scan Periods</string>
+    <string name="action_disable_push_notification">Disable Push Notification</string>
+    <string name="action_enable_push_notification">Enable Push Notification</string>
 
 </resources>
