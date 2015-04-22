@@ -1,35 +1,35 @@
 Lighthouse Android SDK
 ===============
 
-The Lighthouse Android SDK is designed to be simple to develop with, allowing you to easily integrate Lighthouse iBeacon software into your apps. For more info about Lighthouse visit the [Lighthouse Website](http://lighthousebeacon.io)
+The Lighthouse Android SDK is designed to be simple to develop with, allowing you to easily integrate Lighthouse iBeacon software into your apps. For more info about Lighthouse visit the [Lighthouse Website](http://lighthouse.io)
 
 ## Install Guide
 
-Installing the client should be a breeze. If it's not, please let us know at [team@lighthousebeacon.io](mailto:team@lighthousebeacon.io)
+Installing the client should be a breeze. If it's not, please let us know at [team@lighthouse.io](mailto:team@lighthouse.io)
 
 ### Eclipse:
-1.Download the EclipseLibs.zip file.
+1.Download the LighthouseSDK.zip file.
 
 2.Extract the above file.
 
-3.Create a /libs directory inside your project and copy all the JAR files there.
+3.Import LighthouseSDK project.
 
 4.Import google-play-services_lib project from <Your_Android_SDK_Path>/extras/google/google_play_services/libproject/google-play-services_lib.
 
-5.In a new/existing Android Application project, go to Project -> Properties -> Android -> Library -> Add, then select google-play-services_lib.
+5.In a new/existing Android Application project, go to Project -> Properties -> Android -> Library -> Add, then select google-play-services_lib and LighthouseSDK.
 
 6.Add below entries to AndroidManifest.xml:
 
-            <service android:enabled="true"
-                android:exported="true"
+            <service
+                android:name="org.altbeacon.beacon.service.BeaconService"
+                android:enabled="true"
+                android:exported="false"
                 android:isolatedProcess="false"
-                android:label="iBeacon"
-                android:name="com.inlight.lighthousesdk.ibeacon.service.IBeaconService">
-            </service>
-    
-            <service android:enabled="true"
-                android:name="com.inlight.lighthousesdk.ibeacon.IBeaconIntentProcessor">
-            </service>
+                android:label="beacon" />
+            <service
+                android:name="org.altbeacon.beacon.BeaconIntentProcessor"
+                android:enabled="true"
+                android:exported="false" />
             <receiver
                 android:name="com.inlight.lighthousesdk.GcmBroadcastReceiver"
                 android:permission="com.google.android.c2dm.permission.SEND" >
@@ -40,6 +40,9 @@ Installing the client should be a breeze. If it's not, please let us know at [te
                 </intent-filter>
             </receiver>
             <service android:name="com.inlight.lighthousesdk.GcmIntentService" />
+            <provider android:name="com.inlight.lighthousesdk.provider.LighthouseProvider"
+                tools:replace="android:authorities"
+                android:authorities="<Your_Package_Name>" />
             <meta-data android:name="com.google.android.gms.version"
                android:value="@integer/google_play_services_version" />
 
@@ -52,19 +55,17 @@ Installing the client should be a breeze. If it's not, please let us know at [te
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
 
-    <permission android:name="com.inlight.lighthousesdk.permission.C2D_MESSAGE"
+    <permission android:name="<Your_Package_Name>.permission.C2D_MESSAGE"
         android:protectionLevel="signature" />
-    <uses-permission android:name="com.inlight.lighthousesdk.permission.C2D_MESSAGE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="<Your_Package_Name>.permission.C2D_MESSAGE" />
+
+8.Copy and paste ContentProviderAuthority.java file to your project with the same package name so that the lighthouse SDK can find it. And change the value of CONTENT_AUTHORITY to your package name.
 
 ### Android Studio / Gradle:
-1.Download the AndroidStudioLibs.zip file.
+1.Download the lighthouse-release.aar file.
 
-2.Extract the above file.
-
-3.Create a /libs directory inside your project and copy all the AAR files there.
+3.Create a /libs directory inside your project and copy it there.
 
 4.Edit your build.gradle file, and add a "flatDir" entry to your repositories like so:
 
@@ -75,22 +76,40 @@ Installing the client should be a breeze. If it's not, please let us know at [te
         }
     }
 
-5.Edit your build.gradle file to add this AAR as a dependency like below:
-
     dependencies {
-        compile 'com.inlight.lighthouse:lighthouse@aar'
-        compile 'com.android.volley:volley@aar'
+        compile 'com.inlight.lighthouse:lighthouse-release@aar'
+        compile 'com.mcxiaoke.volley:library:1.0.15@aar'
         compile 'com.google.android.gms:play-services:+'
-        compile 'com.android.support:support-v4:+'
+        compile 'org.altbeacon:android-beacon-library:2.1.4'
     }
+
+2.Add below entries to AndroidManifest.xml:
+
+    <provider android:name="com.inlight.lighthousesdk.provider.LighthouseProvider"
+        tools:replace="android:authorities"
+        android:authorities="<Your_Package_Name>" />
+
+3.Add below permissions to AndroidManifest.xml:
+
+    <permission android:name="<Your_Package_Name>.permission.C2D_MESSAGE"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="<Your_Package_Name>.permission.C2D_MESSAGE" />
+
+4.Copy and paste ContentProviderAuthority.java file to your project with the same package name so that the lighthouse SDK can find it. And change the value of CONTENT_AUTHORITY to your package name.
+
+### Proguard configuration
+Please add the following into your proguard configuration file if proguard is enabled.
+
+    -keep class com.inlight.lighthouse.ContentProviderAuthority{ *; }
+    -keep class org.altbeacon.beacon.** { *; }
 
 ### Compile
 Try and compile. It should work!
 
-If it doesn't work, let us know at [team@lighthousebeacon.io](mailto:team@lighthousebeacon.io) and one of us will help you right away.
+If it doesn't work, let us know at [team@lighthouse.io](mailto:team@lighthouse.io) and one of us will help you right away.
 
 ### Get Application ID & Keys
-If you haven't done so already, login to Ligthouse to get your Application ID & Keys.
+If you haven't done so already, login to [Lighthouse](http://www.lighthouse.io) to get your Application ID & Keys.
 
 
 ## Instrumentation
@@ -127,12 +146,23 @@ Register the LighthouseManager with your Application ID and access keys. The rec
                     APP_ID,
                     APP_KEY,
                     APP_TOKEN);
-            lighthouseManager.setLighthouseConfig(lighthouseConfig);
-            lighthouseManager.enableLogging();
-            lighthouseManager.disableRanging();
-            lighthouseManager.enableOffline();
-            lighthouseManager.setBackgroundScanPeriod(5000);
-            lighthouseManager.setBackgroundBetweenScanPeriod(0);
+                lighthouseManager.setLighthouseConfig(lighthouseConfig);
+                // Enable production mode. Default is false.
+                lighthouseManager.enableProduction();
+                // Enable logging. Default is false;
+                lighthouseManager.enableLogging();
+                // Enable ranging. Action ACTION_BEACONS_IN_REGION won't be received. Default is true;
+                lighthouseManager.disableRanging();
+                // Enable offline mode. Enter/Exit events will be stored when network is not available and will be sent to server when network turns available. Default is false;
+                lighthouseManager.enableOffline();
+                // Disable transmission. Events won't be sent to server. Default is true;
+                // lighthouseManager.disableTransmission
+                // Disable monitoring. ACTION_ENTER_BEACON and ACTION_EXIT_BEACON won't be received and enter/exit events won't be sent to server. Default is true;
+                // lighthouseManager.disableMonitoring();
+                // set the duration of the scan to be 1.1 seconds
+                lighthouseManager.setBackgroundScanPeriod(1100l);
+                // set the time between each scan to be 1 minute (60 seconds)
+                lighthouseManager.setBackgroundBetweenScanPeriod(60000l);
             }
         }
     }
@@ -142,49 +172,20 @@ From now on, in your code, you can just reference the shared client by calling l
 
 It is recommended to getInstance in android.app.Application so that lighthouseManager instance can be used each time the app is launched even from notification.
 
-### Service
-In order to keep the lighthouse SDK runing even if the app is terminated, it is recommanded to start a service and launch the SDK in the service.
-Please add below code to keep the the service runing background.
-
-    @Override
-    public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
-    }
-
-    @Override
-    public void onTaskRemoved( Intent rootIntent ) {
-        lighthouseManager.onTaskRemoved();
-    }
+### Running Background
+Like the sample app, define a service to launch the lighthouse SDK helps to keep detecting beacon on the background. In another word, your app will continue sending enter/exit events to lighthouse sever and trigger campaign notification.
 
 ### Battery manager
 To best conserve battery you'll need to add the following lines to your own subclass of android.app.Application.
 
-        @Override
-        public void onCreate(){
-            configLighthouse();
-            startService(new Intent(this,LighthouseService.class));
-            BackgroundPowerSaver backgroundPowerSaver = new BackgroundPowerSaver(this);
-        }
+    @Override
+    public void onCreate(){
+        super.onCreate();
+        BackgroundPowerSaver backgroundPowerSaver = new BackgroundPowerSaver(this);
+    }
 
-        private void configLighthouse() {
-            if (lighthouseManager == null) {
-                lighthouseManager = LighthouseManager.getInstance(this);
 
-                LighthouseConfig lighthouseConfig = new LighthouseConfig(
-                    this.getApplicationContext(),
-                    APP_ID,
-                    APP_KEY,
-                    APP_TOKEN);
-            lighthouseManager.setLighthouseConfig(lighthouseConfig);
-            lighthouseManager.enableLogging();
-            lighthouseManager.disableRanging();
-            lighthouseManager.enableOffline();
-            lighthouseManager.setBackgroundScanPeriod(5000);
-            lighthouseManager.setBackgroundBetweenScanPeriod(0);
-            }
-        }
-
-BackgroundPowerSaver only works when you have set background scan period which will track whether your activity is activie or not and set background mode automatically.
+BackgroundPowerSaver only works when you have set background scan period which will track whether your activity is active or not and set background mode automatically.
 
 
 ### Debugging
@@ -203,39 +204,39 @@ The Lighthouse Android SDK doesn't keep all the beacon events for itself, after 
 
 You can then listen to these intents by using the following example commands:
 
-        LocalBroadcastManager mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
-        lighthouseReceiver = new LighthouseReceiver();
-        String intentPrefix = this.getPackageName();
-        IntentFilter intentFilter = new IntentFilter();
-        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_BEACONS_IN_REGION);
-        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON);
-        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON);
-        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS);
-        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_CAMPAIGN);
-        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_ACTION_CAMPAIGN);
-        intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_NOTIFICATION);
-        mLocalBroadcastManager.registerReceiver(lighthouseReceiver, intentFilter);
- 
-        private class LighthouseReceiver extends BroadcastReceiver {
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            String intentPrefix = context.getPackageName();
-            if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_BEACONS_IN_REGION)) {
-                //deal with the beacons that is in region
-            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON)) {
-                //deal with the case that a beacon enters the device's range
-            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON)) {
-                //deal with the case that a beacon exit the device's range
-            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_NOTIFICATION)) {
-                //received push notification from GCM
-            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_CAMPAIGN)) {
-                //campaign received
-            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ACTION_CAMPAIGN)) {
-                //action campaign
-            } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS)) {
-                //update Settings
-            }
+    LocalBroadcastManager mLocalBroadcastManager = LocalBroadcastManager.getInstance(this);
+    lighthouseReceiver = new LighthouseReceiver();
+    String intentPrefix = this.getPackageName();
+    IntentFilter intentFilter = new IntentFilter();
+    intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_BEACONS_IN_REGION);
+    intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON);
+    intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON);
+    intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS);
+    intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_CAMPAIGN);
+    intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_ACTION_CAMPAIGN);
+    intentFilter.addAction(intentPrefix+LighthouseManager.ACTION_NOTIFICATION);
+    mLocalBroadcastManager.registerReceiver(lighthouseReceiver, intentFilter);
+
+    private class LighthouseReceiver extends BroadcastReceiver {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        String intentPrefix = context.getPackageName();
+        if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_BEACONS_IN_REGION)) {
+            //deal with the beacons that is in region
+        } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON)) {
+            //deal with the case that a beacon enters the device's range
+        } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON)) {
+            //deal with the case that a beacon exit the device's range
+        } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_NOTIFICATION)) {
+            //received push notification from GCM
+        } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_CAMPAIGN)) {
+            //campaign received
+        } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ACTION_CAMPAIGN)) {
+            //action campaign
+        } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_UPDATE_SETTINGS)) {
+            //update Settings
         }
+    }
 
 Event LighthouseManager.ACTION_CAMPAIGN is triggered whenever a request to get more detail about a campaign is made. More details in the next "Detailed Campaign Data" section.
 
@@ -282,14 +283,14 @@ You can view all the properties you have assigned:
 
 You can set properties all at once using a batch method:
 
-        JSONObject properties = new JSONObject();
-        try {
-            properties.put("age",30);
-            properties.put("gender","female");
-            lighthouseManager.setProperties(properties);
-        } catch (JSONException e) {
-            e.printStackTrace();
-        }
+    JSONObject properties = new JSONObject();
+    try {
+        properties.put("age",30);
+        properties.put("gender","female");
+        lighthouseManager.setProperties(properties);
+    } catch (JSONException e) {
+        e.printStackTrace();
+    }
 
 You can set individual properties as well. For instance this example will overwrite the gender property that was already set in the previous method:
 
@@ -333,16 +334,6 @@ To enable offline mode to the Ligthhouse server, simply call:
 
     lighthouseManager.enableOffline();
 
-No matter you are going to use offline mode or not, you have to configure like below to avoid potential INSTALL_FAILED_CONFLICTING_PROVIDER error.
-
-Add below tag to your AndroidManifest.xml:
-
-        <provider android:name="com.inlight.lighthousesdk.provider.LighthouseProvider"
-            tools:replace="android:authorities"
-            android:authorities="YOUR_PACKAGE_NAME" />
-
-Copy and paste ContentProviderAuthority.java file to your project with the same package name so that the lighthouse SDK can find it. And change the value of CONTENT_AUTHORITY to your package name.
-
 ### Ranging & Monitoring
 
 By default the Lighthouse SDK does both ranging and monitoring ibeacons. Sometimes you will not be interested in ranging or monitoring. You can use the following methods to control whether doing ranging or monitoring.By default they are enabled.
@@ -379,6 +370,12 @@ To asynchronously receive notification when the settings are updated you can add
 
 
 ## Changelog
+##### 1.4
++ Change domain name to lighthouse.io
+
++ Add dependency of Android Beacon Library
+
++ Support for Android L
 
 ##### 1.3
 + Use background service to track beacons.
@@ -387,7 +384,7 @@ To asynchronously receive notification when the settings are updated you can add
 
 + Use broadcast to receive data from lighthouse SDK.
 
-+ Add function of disabling ranging or mornitoring.
++ Add function of disabling ranging or monitoring.
 
 + Change the inside expiration time in milliseconds to 45 seconds
 
@@ -401,7 +398,7 @@ To asynchronously receive notification when the settings are updated you can add
 + Send broadcast when received push notification and received campaign data.
 
 ##### 1.1
-+ Added ability to read and subscribe to Lighthouse SDK server settings, in particular whether the SDK should be enabled or not. When the SDK is disabled non of the SDK commands will perform functionality. This means you can include the SDK in a release of your app with it disabled on the server and then in the future you can update the server to enabled and the SDK will begin to perform desired functionality. See Settings information [See Settings information](https://github.com/inlight-media/lighthouse-android#settings).
++ Added ability to read and subscribe to Lighthouse SDK server settings, in particular whether the SDK should be enabled or not. When the SDK is disabled non of the SDK commands will perform functionality. This means you can include the SDK in a release of your app with it disabled on the server and then in the future you can update the server to enabled and the SDK will begin to perform desired functionality. [See Settings information](https://github.com/inlight-media/lighthouse-android#settings).
 
 + Add parameter while request push notifications. Developer can use its own send id to implement GCM push notification. 
 
@@ -410,5 +407,5 @@ To asynchronously receive notification when the settings are updated you can add
 
 ### Questions & Support
 
-If you have any questions, bugs, or suggestions, please email them to [team@lighthousebeacon.io](mailto:team@lighthousebeacon.io). We'd love to hear your feedback and ideas!
+If you have any questions, bugs, or suggestions, please email them to [team@lighthouse.io](mailto:team@lighthouse.io). We'd love to hear your feedback and ideas!
 

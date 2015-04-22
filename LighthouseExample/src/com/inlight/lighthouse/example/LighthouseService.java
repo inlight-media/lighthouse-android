@@ -35,12 +35,7 @@ public class LighthouseService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        return START_STICKY;
-    }
-
-    @Override
-    public void onTaskRemoved( Intent rootIntent ) {
-        lighthouseManager.onTaskRemoved();
+        return START_NOT_STICKY;
     }
 
     @Override

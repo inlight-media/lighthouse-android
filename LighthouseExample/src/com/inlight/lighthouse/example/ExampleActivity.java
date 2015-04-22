@@ -56,6 +56,7 @@ public class ExampleActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_example);
+        startService(new Intent(this,LighthouseService.class));
         mTextView = (TextView) ExampleActivity.this
                 .findViewById(R.id.monitoringText);
         mTextView.setMovementMethod(new ScrollingMovementMethod());
@@ -241,10 +242,10 @@ public class ExampleActivity extends Activity {
                 mAdapter.notifyDataSetChanged();
             } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_ENTER_BEACON)) {
                 IBeacon beaconData = intent.getParcelableExtra(LighthouseManager.EXTRA_BEACON);
-                logToDisplay(getCurrentTime() + " Did enter iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
+                logToDisplay(getCurrentTime() + " Did enter iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor());
             } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_EXIT_BEACON)) {
                 IBeacon beaconData = intent.getParcelableExtra(LighthouseManager.EXTRA_BEACON);
-                logToDisplay(getCurrentTime() + " Did exit iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor() + "  " + beaconData.getAccuracy() + "  " + beaconData.getBluetoothAddress());
+                logToDisplay(getCurrentTime() + " Did exit iBeacon named " + beaconData.getProximityUuid() + " " + beaconData.getMajor() + " " + beaconData.getMinor());
             } else if (intent.getAction().equals(intentPrefix+LighthouseManager.ACTION_NOTIFICATION)) {
                 LighthouseNotification notification = intent.getParcelableExtra(LighthouseManager.EXTRA_NOTIFICATION);
                 logToDisplay(getCurrentTime() + " Did received a notification: "

@@ -39,6 +39,9 @@ android {
 
         instrumentTest.setRoot('tests')
     }
+    packagingOptions {
+        exclude 'model-distance-calculations.json'
+    }
 }
 
 repositories {
@@ -46,10 +49,12 @@ repositories {
     flatDir {
         dirs 'libs'
     }
+    jcenter()
 }
 dependencies {
     compile 'com.google.android.gms:play-services:+'
     compile 'com.android.support:support-v4:18.0.0'
     compile 'com.inlight.lighthouse:lighthouse@aar'
     compile 'com.android.volley:volley@aar'
+    compile 'org.altbeacon:android-beacon-library:+'
 }

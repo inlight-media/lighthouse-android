@@ -29,7 +29,7 @@ public class ExampleApplication extends Application {
         if (resultCode != ConnectionResult.SUCCESS) {
             Log.d("ExampleApplication","Google Play services might not be installed or enabled on this device");
         }
-        startService(new Intent(this,LighthouseService.class));
+        // save the battery power when your beacon app is running in the background.
         BackgroundPowerSaver backgroundPowerSaver = new BackgroundPowerSaver(this);
     }
 
@@ -55,8 +55,10 @@ public class ExampleApplication extends Application {
             lighthouseManager.enableLogging();
 //            lighthouseManager.disableRanging();
             lighthouseManager.enableOffline();
-            lighthouseManager.setBackgroundScanPeriod(5000);
-            lighthouseManager.setBackgroundBetweenScanPeriod(0);
+            // set the duration of the scan to be 1.1 seconds
+            lighthouseManager.setBackgroundScanPeriod(1100l);
+            // set the time between each scan to be 1 minute (60 seconds)
+            lighthouseManager.setBackgroundBetweenScanPeriod(5000l);
 //            lighthouseManager.disableTransmission();
         }
     }
